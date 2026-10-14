@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#F9F8F6">
+<title>上班摸鱼模拟器</title>
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  :root{
+    --bg-outer:#E8E3D8;
+    --bg-paper:#F9F8F6;
+    --bg-paper2:#FFFFFF;
+    --bg-soft:#F2F0EC;
+    --line:#E5E5EA;
+    --line-soft:#EEEDEA;
+    --txt:#1C1C1E;
+    --txt2:#3A3A3C;
+    --txt3:#48484A;
+    --dim:#8E8E93;
+    --dim2:#AEAEB2;
+    --yellow:#E5A93C;
+    --yellow-deep:#D48806;
+    --yellow-soft:#FEF6E4;
+    --san:#34C759;
+    --sus:#FF3B30;
+    --money:#E5A93C;
+    --time:#007AFF;
+  }
+
+  html,body{ height:100%; }
+
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--bg-outer);
+    background-image:radial-gradient(circle at 50% 0%, #F2EEE5 0%, #E5DFD2 100%);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--txt);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  #app{
+    position:relative;
+    width:100%;
+    max-width:430px;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    background:var(--bg-paper);
+    overflow:hidden;
+  }
+  @media (min-width:520px) and (min-height:760px){
+    #app{
+      height:min(880px,92vh);
+      border-radius:22px;
+      border:1px solid rgba(0,0,0,.06);
+      box-shadow:
+        0 40px 100px rgba(60,50,30,.18),
+        0 4px 20px rgba(60,50,30,.08),
+        0 0 0 1px rgba(255,255,255,.6) inset;
+    }
+  }
+
+  /* ============ 备忘录工具栏 ============ */
+  #toolbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 16px 12px;
+    border-bottom:1px solid var(--line-soft);
+    flex-shrink:0;
+    background:var(--bg-paper);
+    position:relative;
+    z-index:5;
+  }
+  .tb-left{
+    display:flex;
+    align-items:center;
+    gap:2px;
+    color:var(--yellow-deep);
+    font-size:14px;
+    font-weight:400;
+    letter-spacing:.01em;
+    cursor:pointer;
+    user-select:none;
+    -webkit-user-select:none;
+    padding:2px 4px;
+    margin:-2px -4px;
+    border-radius:6px;
+    transition:background .2s ease;
+  }
+  .tb-left:hover{
+    background:rgba(229,169,60,.06);
+  }
+  .tb-left:active{
+    background:rgba(229,169,60,.12);
+  }
+  .tb-chevron{
+    font-size:21px;
+    line-height:1;
+    margin-top:-3px;
+    font-weight:300;
+    pointer-events:none;
+  }
+  .tb-folder{
+    pointer-events:none;
+  }
+  .tb-center{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:12px;
+    color:var(--dim);
+    letter-spacing:.02em;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+    pointer-events:none;
+  }
+  .tb-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:var(--dim);
+  }
+  .tb-dots{
+    font-size:18px;
+    line-height:1;
+    color:var(--dim2);
+    letter-spacing:.02em;
+    user-select:none;
+    padding-bottom:4px;
+    pointer-events:none;
+  }
+
+  /* ============ HUD ============ */
+  #hud{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+    padding:14px 14px 12px;
+    border-bottom:1px solid var(--line-soft);
+    flex-shrink:0;
+    background:var(--bg-paper);
+  }
+  .stat{
+    background:var(--bg-paper2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 8px 9px;
+    transition:all .3s ease;
+    overflow:hidden;
+    box-shadow:0 1px 2px rgba(60,50,30,.03);
+  }
+  .stat.warn{
+    border-color:rgba(255,59,48,.35);
+    background:#FFF5F4;
+  }
+  .stat.warn .stat-val{ color:var(--sus); }
+  .stat.danger{
+    border-color:rgba(229,169,60,.55);
+    background:var(--yellow-soft);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  .stat.danger .stat-val{ color:var(--yellow-deep); }
+  @keyframes pulse{
+    0%,100%{ opacity:1; }
+    50%{ opacity:.75; }
+  }
+  .stat-head{
+    display:flex;
+    align-items:center;
+    gap:3px;
+    font-size:9.5px;
+    color:var(--dim);
+    letter-spacing:.05em;
+    margin-bottom:4px;
+    white-space:nowrap;
+  }
+  .stat-head span:first-child{ font-size:8px; }
+  .stat-val{
+    font-size:14.5px;
+    font-weight:600;
+    letter-spacing:-.01em;
+    font-variant-numeric:tabular-nums;
+    margin-bottom:6px;
+    color:var(--txt);
+    white-space:nowrap;
+    transition:color .3s;
+  }
+  .bar{
+    height:3px;
+    border-radius:2px;
+    background:rgba(0,0,0,.05);
+    overflow:hidden;
+  }
+  .bar i{
+    display:block;
+    height:100%;
+    width:0%;
+    border-radius:2px;
+    transition:width .6s cubic-bezier(.4,0,.2,1);
+  }
+  #bSlot{ background:var(--time); }
+  #bSan{ background:var(--san); }
+  #bSus{ background:var(--sus); }
+  #bMoney{ background:var(--money); }
+
+  /* ============ 剧情区 ============ */
+  #stage{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    display:flex;
+    padding:26px 24px;
+    scrollbar-width:none;
+    background:var(--bg-paper);
+  }
+  #stage::-webkit-scrollbar{ display:none; }
+  .stage-inner{ margin:auto; width:100%; }
+
+  .slot-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:16px;
+  }
+  .slot-dot{
+    width:22px;
+    height:4px;
+    border-radius:2px;
+    background:rgba(0,0,0,.07);
+    transition:background .35s, box-shadow .35s;
+  }
+  .slot-dot.done{ background:rgba(0,0,0,.22); }
+  .slot-dot.now{
+    background:var(--yellow);
+    box-shadow:0 0 8px rgba(229,169,60,.4);
+  }
+
+  .clock{
+    display:inline-block;
+    font-size:11px;
+    letter-spacing:.06em;
+    color:var(--dim);
+    background:var(--bg-soft);
+    border:none;
+    padding:4px 11px;
+    border-radius:999px;
+    margin-bottom:16px;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .evt-title{
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:-.02em;
+    line-height:1.4;
+    margin-bottom:14px;
+    color:var(--txt);
+  }
+
+  .evt-text{
+    font-size:15.5px;
+    line-height:1.88;
+    color:var(--txt3);
+    letter-spacing:.005em;
+  }
+
+  .result-text{
+    font-size:15.5px;
+    line-height:1.9;
+    color:var(--txt);
+    letter-spacing:.005em;
+  }
+
+  .risk-badge{
+    display:inline-block;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.06em;
+    color:var(--yellow-deep);
+    background:var(--yellow-soft);
+    border:1px solid rgba(229,169,60,.28);
+    padding:4px 11px;
+    border-radius:999px;
+    margin-bottom:14px;
+    animation:fadeIn .3s ease both;
+  }
+
+  /* ============ 选项区 ============ */
+  #choices{
+    flex-shrink:0;
+    padding:12px 14px calc(16px + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    border-top:1px solid var(--line-soft);
+    background:var(--bg-paper);
+  }
+
+  .btn{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:14px 16px;
+    background:var(--bg-paper2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    color:var(--txt);
+    font-family:inherit;
+    font-size:14.5px;
+    line-height:1.55;
+    letter-spacing:.005em;
+    cursor:pointer;
+    transition:all .18s cubic-bezier(.22,.8,.3,1);
+    box-shadow:
+      0 1px 2px rgba(60,50,30,.04),
+      0 2px 8px rgba(60,50,30,.03);
+    position:relative;
+  }
+  @media (hover:hover){
+    .btn:hover{
+      border-color:rgba(229,169,60,.45);
+      box-shadow:
+        0 2px 4px rgba(60,50,30,.06),
+        0 6px 16px rgba(229,169,60,.12);
+      transform:translateY(-1px);
+    }
+  }
+  .btn:active{
+    transform:scale(.985);
+    background:#FCFBF8;
+    box-shadow:0 1px 2px rgba(60,50,30,.05);
+  }
+  .btn-label{ display:block; }
+
+  .btn.primary{
+    text-align:center;
+    font-weight:600;
+    background:linear-gradient(180deg,#F8D57E 0%,#E5A93C 100%);
+    border:1px solid rgba(212,136,6,.28);
+    color:#5C3A00;
+    letter-spacing:.03em;
+    text-shadow:0 1px 1px rgba(255,255,255,.35);
+    box-shadow:
+      0 2px 4px rgba(212,136,6,.15),
+      0 4px 14px rgba(229,169,60,.2);
+  }
+  @media (hover:hover){
+    .btn.primary:hover{
+      background:linear-gradient(180deg,#FBDD8E 0%,#E5A93C 100%);
+      box-shadow:
+        0 3px 6px rgba(212,136,6,.18),
+        0 8px 22px rgba(229,169,60,.28);
+    }
+  }
+  .btn.primary:active{
+    background:linear-gradient(180deg,#E5A93C 0%,#D48806 100%);
+    transform:scale(.985);
+  }
+
+  /* ============ 遮罩层 ============ */
+  .overlay{
+    position:absolute;
+    inset:0;
+    z-index:60;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:40px 30px calc(40px + env(safe-area-inset-bottom));
+    text-align:center;
+    background:var(--bg-paper);
+    animation:fadeIn .45s ease both;
+    overflow-y:auto;
+    scrollbar-width:none;
+  }
+  .overlay::-webkit-scrollbar{ display:none; }
+  .overlay.hidden{ display:none; }
+
+  .intro-date{
+    font-size:11px;
+    letter-spacing:.16em;
+    color:var(--dim);
+    margin-bottom:22px;
+    text-transform:uppercase;
+  }
+  .intro-title{
+    font-size:34px;
+    font-weight:700;
+    letter-spacing:-.03em;
+    line-height:1.25;
+    margin-bottom:24px;
+    color:var(--txt);
+  }
+  .intro-desc{
+    font-size:14px;
+    line-height:2.05;
+    color:var(--dim);
+    margin-bottom:36px;
+    max-width:330px;
+  }
+  .intro-desc b{ color:var(--txt); font-weight:600; }
+
+  .end-icon{
+    font-size:54px;
+    line-height:1;
+    margin-bottom:20px;
+  }
+  .end-title{
+    font-size:26px;
+    font-weight:700;
+    letter-spacing:-.02em;
+    margin-bottom:16px;
+    color:var(--txt);
+  }
+  .end-title.good{ color:#2E8B57; }
+  .end-title.bad{ color:var(--sus); }
+  .end-title.wild{ color:#AF52DE; }
+  .end-title.gold{ color:var(--yellow-deep); }
+  .end-sub{
+    font-size:11px;
+    letter-spacing:.16em;
+    color:var(--dim2);
+    margin-bottom:14px;
+    text-transform:uppercase;
+    font-weight:500;
+  }
+  .end-text{
+    font-size:14px;
+    line-height:1.95;
+    color:var(--dim);
+    margin-bottom:20px;
+    max-width:340px;
+  }
+
+  .daily-list{
+    width:100%;
+    max-width:320px;
+    margin-bottom:26px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .daily-list div{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 15px;
+    background:var(--bg-paper2);
+    border:1px solid var(--line);
+    border-radius:11px;
+    font-size:12.5px;
+    box-shadow:0 1px 2px rgba(60,50,30,.03);
+  }
+  .daily-list div span{ color:var(--dim); }
+  .daily-list div b{
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    font-size:14px;
+    color:var(--txt);
+  }
+  .daily-list div b.good{ color:#2E8B57; }
+  .daily-list div b.gold{ color:var(--yellow-deep); }
+  .daily-list div b.sus{ color:#2E8B57; }
+
+  .battle-card{
+    width:100%;
+    max-width:340px;
+    background:var(--bg-paper2);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+    margin-bottom:26px;
+    text-align:left;
+    box-shadow:
+      0 1px 2px rgba(60,50,30,.04),
+      0 2px 10px rgba(60,50,30,.04);
+  }
+  .battle-card .row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:9px 0;
+    border-bottom:1px dashed rgba(0,0,0,.06);
+    font-size:12.5px;
+  }
+  .battle-card .row:last-child{ border-bottom:none; }
+  .battle-card .row span{ color:var(--dim); letter-spacing:.04em; }
+  .battle-card .row b{
+    font-size:14px;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    color:var(--txt);
+    text-align:right;
+  }
+  .battle-card .row b.gold{ color:var(--yellow-deep); }
+  .battle-card .row b.bad{ color:var(--sus); }
+  .battle-card .row b.purple{ color:#AF52DE; }
+
+  .end-actions{ width:100%; max-width:320px; }
+
+  /* ============ 动画 ============ */
+  @keyframes fadeUp{
+    from{ opacity:0; transform:translateY(9px); }
+    to{ opacity:1; transform:none; }
+  }
+  @keyframes fadeIn{
+    from{ opacity:0; }
+    to{ opacity:1; }
+  }
+  .fade{ animation:fadeUp .42s cubic-bezier(.22,.8,.3,1) both; }
+
+  /* ============ Debug 面板（隐藏彩蛋：5连击触发） ============ */
+  #debugPanel{
+    position:absolute;
+    top:56px;
+    left:50%;
+    margin-left:-118px;
+    width:236px;
+    background:rgba(255,255,255,.98);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px;
+    z-index:71;
+    box-shadow:
+      0 20px 50px rgba(60,50,30,.15),
+      0 4px 14px rgba(60,50,30,.08),
+      0 0 0 1px rgba(255,255,255,.5) inset;
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    animation:debugIn .22s cubic-bezier(.22,.8,.3,1) both;
+    transform-origin:top center;
+  }
+  #debugPanel.hidden{ display:none; }
+
+  @keyframes debugIn{
+    from{ opacity:0; transform:scale(.92) translateY(-6px); }
+    to{ opacity:1; transform:scale(1) translateY(0); }
+  }
+
+  .debug-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:10.5px;
+    letter-spacing:.1em;
+    color:var(--dim);
+    margin-bottom:11px;
+    padding-bottom:9px;
+    border-bottom:1px solid var(--line-soft);
+    text-transform:uppercase;
+  }
+  .debug-title em{
+    font-style:normal;
+    font-size:9.5px;
+    color:var(--dim2);
+    letter-spacing:.04em;
+  }
+
+  #debugPanel button{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    width:100%;
+    text-align:left;
+    padding:9px 11px;
+    background:var(--bg-paper2);
+    border:1px solid var(--line-soft);
+    border-radius:9px;
+    color:var(--txt2);
+    font-size:12px;
+    font-family:inherit;
+    line-height:1.4;
+    cursor:pointer;
+    margin-bottom:6px;
+    transition:all .15s ease;
+    letter-spacing:.01em;
+  }
+  #debugPanel button:last-of-type{ margin-bottom:0; }
+  #debugPanel button:hover{
+    background:var(--yellow-soft);
+    border-color:rgba(229,169,60,.35);
+    transform:translateX(1px);
+  }
+  #debugPanel button:active{ transform:scale(.985); }
+  #debugPanel button .d-icon{
+    font-size:13px;
+    flex-shrink:0;
+    width:16px;
+    text-align:center;
+  }
+  #debugPanel button.day{ color:#007AFF; }
+  #debugPanel button.money{ color:var(--yellow-deep); }
+  #debugPanel button.fired{ color:var(--sus); }
+  #debugPanel button.mad{ color:#AF52DE; }
+  #debugPanel button.veteran{ color:var(--yellow-deep); }
+
+  .debug-hint{
+    font-size:9.5px;
+    color:var(--dim2);
+    text-align:center;
+    margin-top:10px;
+    letter-spacing:.04em;
+  }
+
+  /* ============ Toast ============ */
+  #toast{
+    position:absolute;
+    bottom:110px;
+    left:50%;
+    transform:translateX(-50%) translateY(10px);
+    background:rgba(28,28,30,.92);
+    color:#FFFFFF;
+    padding:9px 16px;
+    border-radius:10px;
+    font-size:12px;
+    letter-spacing:.02em;
+    z-index:80;
+    opacity:0;
+    transition:opacity .2s ease, transform .2s ease;
+    pointer-events:none;
+    white-space:nowrap;
+    box-shadow:0 10px 30px rgba(0,0,0,.2);
+    font-variant-numeric:tabular-nums;
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+  }
+  #toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- 备忘录工具栏 -->
+  <div id="toolbar">
+    <div class="tb-left" id="memoTrigger" title="备忘录">
+      <span class="tb-chevron">‹</span>
+      <span class="tb-folder">备忘录</span>
+    </div>
+    <div class="tb-center" id="tbCenter">1月6日 周一</div>
+    <div class="tb-right">
+      <span class="tb-dots">⋯</span>
+    </div>
+  </div>
+
+  <header id="hud">
+    <div class="stat" data-k="day">
+      <div class="stat-head"><span>📅</span><span>Day</span></div>
+      <div class="stat-val" id="vDay">1</div>
+      <div class="bar"><i id="bSlot"></i></div>
+    </div>
+    <div class="stat" data-k="san">
+      <div class="stat-head"><span>🟢</span><span>San</span></div>
+      <div class="stat-val" id="vSan">60</div>
+      <div class="bar"><i id="bSan"></i></div>
+    </div>
+    <div class="stat" data-k="sus">
+      <div class="stat-head"><span>🔴</span><span>怀疑</span></div>
+      <div class="stat-val" id="vSus">25%</div>
+      <div class="bar"><i id="bSus"></i></div>
+    </div>
+    <div class="stat" data-k="money">
+      <div class="stat-head"><span>💰</span><span>存款</span></div>
+      <div class="stat-val" id="vMoney">3200</div>
+      <div class="bar"><i id="bMoney"></i></div>
+    </div>
+  </header>
+
+  <main id="stage">
+    <div class="stage-inner" id="stageInner"></div>
+  </main>
+
+  <footer id="choices"></footer>
+
+  <div class="overlay" id="intro">
+    <div class="intro-date">周一 · 09:00 · 工位</div>
+    <div class="intro-title">上班摸鱼<br>模拟器</div>
+    <div class="intro-desc">
+      你是一名普通的打工人。<br>
+      每天有 <b>4 个关键时段</b>，熬过去就能打卡下班。<br>
+      活过 <b>17:30</b>，工资到手、精神恢复、老板怀疑回落。<br><br>
+      撑得越久，公司越离不开你——或者，越容不下你。
+    </div>
+    <div class="end-actions">
+      <button class="btn primary" id="startBtn">开始第一天</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="dayEnd"></div>
+  <div class="overlay hidden" id="ending"></div>
+
+  <!-- Debug 调试面板（隐藏彩蛋） -->
+  <div id="debugPanel" class="hidden">
+    <div class="debug-title"><span>🔧 调试控制台</span><em>DEV ONLY</em></div>
+    <button class="day" data-act="addDay"><span class="d-icon">📅</span>一键天数 +5</button>
+    <button class="money" data-act="addMoney"><span class="d-icon">💰</span>一键金钱 +10000</button>
+    <button class="fired" data-act="maxSus"><span class="d-icon">🚪</span>怀疑度拉满（被开除）</button>
+    <button class="mad" data-act="zeroSan"><span class="d-icon">🤯</span>清空 San 值（发疯结局）</button>
+    <button class="veteran" data-act="jump30"><span class="d-icon">🏆</span>跳到 Day 30（光荣通关）</button>
+    <div class="debug-hint">再连点 5 次备忘录可收起</div>
+  </div>
+
+  <div id="toast"></div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     常量
+  ========================================================= */
+  const SLOTS = [
+    { time:'10:00', label:'上午' },
+    { time:'14:00', label:'午后' },
+    { time:'16:00', label:'下午' },
+    { time:'17:30', label:'傍晚' }
+  ];
+
+  const DAILY_SALARY = 500;
+  const VETERAN_DAY  = 30;
+
+  // Debug 隐藏彩蛋参数
+  const TAP_TARGET   = 5;     // 需要连点次数
+  const TAP_TIMEOUT  = 900;   // 毫秒：超过此间隔则重置计数
+
+  /* =========================================================
+     事件库（36 个 · 单局不重复抽取）
+  ========================================================= */
+  const EVENTS = [
+    {
+      t:'外包 HR 的微信',
+      s:'抽屉里的手机震了第七次。屏幕亮起，是外包 HR：“在吗？想跟你确认下这个月考勤哈～”你昨天才提交过。',
+      c:[
+        { l:'秒回“在的姐”，附上昨天的截图', e:{san:-6,sus:-4}, r:'HR 秒回“好的谢谢宝～”，然后再也没出现过。你盯着那个“宝”字，感觉人格被廉价地抚慰了一下。' },
+        { l:'装死，把手机塞进抽屉最深处', e:{san:-12,sus:8}, r:'一小时后她发来“看到请回复哦～”。你知道这事没完，但至少这一小时，世界是安静的。' },
+        { l:'截图发到摸鱼群，配文“又来活了”', e:{san:16,sus:12}, r:'群里 12 个人秒回“哈哈哈哈”。你在集体共鸣中获得了巨大的精神满足，同时错过了一条 @全体成员。' }
+      ]
+    },
+    {
+      t:'背后一凉',
+      s:'你正刷到一只猫试图把自己塞进玻璃杯。忽然，一阵带着薄荷糖味道的咳嗽在你身后响起。屏幕的蓝光正打在你脸上。',
+      c:[
+        { l:'0.5 秒内 Alt+Tab 切到 Excel，疯狂敲数字', e:{san:-8,sus:-15}, r:'手指在键盘上飞舞，其实你只在 Excel 里输入了“1、2、3、4”。老板“嗯”了一声走了。你手心全是汗，但表格里已经数到 47 了。' },
+        { l:'面不改色继续看，赌他看不懂', e:{san:10,sus:22}, r:'老板盯着你的屏幕看了整整八秒，然后说：“这个……是新的数据看板吧？”你点头。他走了。你的心跳还在 140。' },
+        { l:'站起来去接水，顺便帮他带一杯冰美式', e:{san:-4,sus:-8,money:-22}, r:'老板摆手说不用。但你起身的那一刻，那只猫已经被你精准地切走了。代价是茶水间里遇见三个同事，寒暄掉了半条命。',
+          risk:{ p:0.3, e:{san:-14,sus:14}, r:'你起身太急，椅子腿绊住电源线，显示器黑屏。老板弯腰帮你把线插回去，顺便看到了你还没来得及关掉的猫咪视频。' } }
+      ]
+    },
+    {
+      t:'带薪如厕第 22 分钟',
+      s:'你已经在隔间里坐了 22 分钟。腿麻了。手机电量还剩 43%。保洁阿姨进来拖了两次地，你不敢出声。',
+      c:[
+        { l:'再刷十分钟，腿麻也是一种沉浸式体验', e:{san:16,sus:12}, r:'你扶着墙走出去，双腿像两根借来的火腿。回工位的路上，你用了 40 秒走了 8 米。' },
+        { l:'立刻起身，练习一个“刚开完会”的表情回去', e:{san:-6,sus:-10}, r:'你洗了手，对着镜子练习了一个“刚开完会”的表情。回到工位时，组长问你“会顺利吗”，你点头。' },
+        { l:'在隔间里做 20 个深蹲，把带薪时间变成健身时间', e:{san:10,sus:3}, r:'你做了 20 个深蹲，喘得像刚跑完马拉松。但你的精神内耗确实少了一点点。',
+          risk:{ p:0.35, e:{san:-16,sus:20}, r:'第 18 个深蹲时，隔间门被隔壁同事敲响了：“兄弟，你没事吧？”你僵在原地，裤子还没提。' } }
+      ]
+    },
+    {
+      t:'被表扬的周报',
+      s:'你用 AI 生成的周报被老板转发到了部门大群，配文“这才是专业的总结，大家学习一下”。但文末的落款赫然写着——“以上由 ChatGPT 生成，仅供参考”。群里已经排队发了 6 个赞。',
+      c:[
+        { l:'趁没人注意，三秒内撤回重发', e:{san:-10,sus:-12}, r:'你用了 3 秒撤回、5 秒修改、2 秒重发。没有一个人发现。你的手指在发抖，但你的职业生涯保住了。' },
+        { l:'淡定回复：“谢谢老板，还在继续打磨”', e:{san:16,sus:6}, r:'你收获了本季度最高光的一刻。代价是你现在必须记住自己编的那些“抓手”和“闭环”到底是什么意思。' },
+        { l:'主动承认用了 AI，主打一个真诚', e:{san:-18,sus:20}, r:'老板沉默三秒，回了句“挺好的，效率工具嘛”。第二天晨会，他宣布全组要“拥抱 AI 转型”，你被指定为内训讲师。' }
+      ]
+    },
+    {
+      t:'耳机断连的瞬间',
+      s:'你戴着蓝牙耳机，正在刷一位男爱豆的打歌舞台直拍。副歌部分刚要开始，耳机忽然断连——手机扬声器以最大音量，把那段鼓点清晰地送进了整个安静的办公室。',
+      c:[
+        { l:'以闪电速度按掉音量键，假装是电话铃声', e:{san:-14,sus:18}, r:'你抓起手机贴到耳边，“喂？喂？听不清——”然后快步走向楼梯间。你演得很像。但隔壁组的人已经笑了。' },
+        { l:'顺势站起来，大声说“这歌不错吧，推荐给大家”', e:{san:12,sus:-6}, r:'办公室安静了两秒，然后有人跟着哼了一句。你成功把一场社死变成了一次团建，也成功被记住了。' },
+        { l:'低头装死，让时间自己过去', e:{san:-22,sus:14}, r:'那 8 秒像一个世纪。音乐停了，世界安静了。此后每次有人路过你的工位，你都会下意识地摸一下耳机。' }
+      ]
+    },
+    {
+      t:'两小时无效会议',
+      s:'会议已经进行了 100 分钟。议题是“如何提升会议效率”。没有人提这件事。投影仪上是第 14 页 PPT，标题是“下一步行动计划”。',
+      c:[
+        { l:'在会议纪要里认真记下“待定”“再议”“同步一下”', e:{san:-8,sus:-10}, r:'你写满了整整两页。会后有人找你：“你记得最全，帮我们发一下纪要吧。”你成了会议纪要的永久负责人。' },
+        { l:'偷偷开小窗改简历，偶尔点头', e:{san:8,sus:16}, r:'你更新了两段项目经历，还顺手投了三家。会议结束时你竟然有点意犹未尽。' },
+        { l:'举手发言：“我建议我们建一个群，会后继续讨论”', e:{san:-16,sus:-14}, r:'全场鼓掌。会议提前 10 分钟结束。你被拉进了 4 个新群。' }
+      ]
+    },
+    {
+      t:'线上故障复盘会',
+      s:'故障复盘会上，所有人的目光都集中在你身上。产品说“需求是研发实现的”，研发说“测试没覆盖”，测试说“需求本身没写清楚”。而你是那份需求文档的最后一个编辑人。',
+      c:[
+        { l:'把文档的提交记录投影出来，自证清白', e:{san:-16,sus:-12}, r:'提交记录显示最后修改人是产品。会议气氛瞬间凝固。你赢了，但你也失去了一个可以一起点奶茶的同事。' },
+        { l:'“这次是我考虑不周，下次一定改进”', e:{san:-20,sus:-18}, r:'会议室里的空气松弛下来。老板说“态度很好”。你感到胸口有什么东西碎掉了一小块。' },
+        { l:'开始念 PPT：“我们从这次故障中学到了……”', e:{san:10,sus:-8}, r:'你用了三个“赋能”、两个“抓手”、一个“闭环”。会议提前 20 分钟结束。没人记得故障原因，但大家都记住了你。' }
+      ]
+    },
+    {
+      t:'吃瓜吃到自己头上',
+      s:'午休时你听到两个同事在茶水间小声聊天：“听说……有人每天下午都在工位上打游戏。”你端着杯子站在门外，脚动不了。',
+      c:[
+        { l:'立刻转身回工位，接下来三小时表演勤奋', e:{san:-12,sus:-10}, r:'你打开 IDE，删掉一个空行又加回去，来回 40 次。那两人路过时，你正在“调试”。' },
+        { l:'走进去，笑着说“谁啊，这么勇”', e:{san:14,sus:22}, r:'两人表情一僵，随即笑开。三分钟后，你成了他们的新瓜。四分钟后，全组都知道了。' },
+        { l:'端着杯子站在原地听完', e:{san:-6,sus:8}, r:'你听到了自己的名字。你听完了整段。你回到了工位，像什么也没发生。' }
+      ]
+    },
+    {
+      t:'电梯里的 17 秒',
+      s:'电梯门关上，只有你和 CEO。他看了看你，又看了看楼层数，然后开口：“最近忙不忙？”',
+      c:[
+        { l:'“还行，手上的项目都在推进中”', e:{san:-10,sus:-10}, r:'CEO 点点头：“好，好好干。”电梯到 12 楼，他走了。这 17 秒消耗了你一下午的社交配额。' },
+        { l:'“挺忙的，但都是应该的”', e:{san:-14,sus:-16}, r:'CEO 笑了：“年轻人有干劲。”你在心里给自己颁发了奥斯卡。' },
+        { l:'“不忙，其实我们组可以再优化一下流程”', e:{san:8,sus:25}, r:'CEO 眼睛一亮：“好啊，你写个方案，下周汇报。”电梯门开了，你的人生也开了新的副本。' }
+      ]
+    },
+    {
+      t:'“自愿”加班群',
+      s:'邻座同事拉你进了一个新群，群名叫“周五冲刺小分队（自愿）”。群公告写着：今晚 20:00 一起看个进度，不强制。',
+      c:[
+        { l:'回复“收到”，然后立刻设置消息免打扰', e:{san:2,sus:-6}, r:'你打了“收到”两个字，然后关掉提醒。整个下午群里刷了 200 条消息，你一条都没看。' },
+        { l:'在群里积极发言，狂刷存在感', e:{san:-16,sus:-14}, r:'你连发了 8 条“可以”“没问题”“我来跟进”。同事给你点了个赞。你的灵魂又薄了一层。' },
+        { l:'直接退群，理由是“手滑了”', e:{san:14,sus:20}, r:'三分钟后，组长私聊你：“刚才那个群你退了吗？”你说手滑。他说：“哦，那你再进一下吧。”' }
+      ]
+    },
+    {
+      t:'外卖到了',
+      s:'外卖小哥打电话说餐已经放在前台。但公司规定：工位不能吃东西，只能在茶水间站着吃。你的麻辣烫正在变凉。',
+      c:[
+        { l:'去茶水间站着吃完，10 分钟解决战斗', e:{san:6,sus:-2}, r:'你站在茶水间的窗边，对着楼下的车流吃完了麻辣烫。汤是热的，心是凉的，但胃是满足的。' },
+        { l:'把外卖藏进抽屉，一边敲键盘一边偷偷吃', e:{san:18,sus:14}, r:'你成功地在老板路过时把一口粉丝吸进嘴里，且没有发出任何声音。这是一项可以写进简历的技能。' },
+        { l:'分给全组同事，请客换人心', e:{san:4,sus:-12,money:-80}, r:'麻辣烫被分成 6 份，每人两口。同事们的笑容让你觉得自己像个食堂阿姨，但怀疑度确实降了。' }
+      ]
+    },
+    {
+      t:'入职三周年快乐',
+      s:'系统自动发送的邮件：恭喜你入职三周年！附件是一张电子贺卡，抄送人里出现了“绩效改进计划”几个字。',
+      c:[
+        { l:'截图发朋友圈，配文“三年了，还在”', e:{san:14,sus:10}, r:'你收获了 43 个赞和 2 条“加油”。你妈在下面评论：“注意身体。”' },
+        { l:'关掉邮件，继续干活，什么也不想', e:{san:-12,sus:-8}, r:'你关掉了邮件，像关掉一个不想面对的人生弹窗。手上的活儿还在，很好，很好。' },
+        { l:'打开招聘软件，刷十分钟', e:{san:10,sus:16}, r:'你更新了简历。三分钟后，一个猎头发来消息：“在看不？”你回复：“随便看看。”你说谎了。' }
+      ]
+    },
+    {
+      t:'下午三点',
+      s:'下午三点，办公室的灯忽然显得特别白。键盘声像雨点，你盯着屏幕上的一行代码，已经看了八分钟，一个字也没读进去。',
+      c:[
+        { l:'泡今天第三杯咖啡，强行续命', e:{san:2,sus:-2,money:-15}, r:'咖啡因让你的心跳变快了，但脑子依旧是糊的。至少你端着杯子的样子看起来很忙。' },
+        { l:'趴桌上睡十分钟，设三个闹钟', e:{san:20,sus:15}, r:'你睡得很沉。醒来时发现身上多了件外套——也可能是同事随手扔过来的。' },
+        { l:'打开内部学习平台，刷一节《高效能人士的七个习惯》', e:{san:-8,sus:-12}, r:'你看了 12 分钟，学会了“要事第一”。然后你把它记在便签上，便签贴在显示器边。' }
+      ]
+    },
+    {
+      t:'洗手台边的偶遇',
+      s:'你正在洗手，老板从隔间出来，站在你旁边对着镜子整理领带，然后忽然问：“你那个方案，什么进度了？”你根本没听过这个方案。',
+      c:[
+        { l:'“在做最后的收尾，明天给您”', e:{san:-16,sus:-10}, r:'老板说“好”。于是你有了一个晚上，和一整份不存在的方案。' },
+        { l:'“哪个方案？”', e:{san:-8,sus:14}, r:'老板停顿了两秒，说：“回去看看群。”然后走了。你擦干手，打开了那个有 300 条未读的群。' },
+        { l:'把水龙头开大，假装没听见', e:{san:8,sus:18}, r:'水流声盖过了他的问题。你抬头对他笑了笑。他在镜子里看了你三秒，转身走了。',
+          risk:{ p:0.35, e:{san:-10,sus:26}, r:'老板也拧开水龙头，站在你旁边，一起冲了 30 秒的手。期间他一言不发地盯着镜子里的你。' } }
+      ]
+    },
+    {
+      t:'“帮我看一眼”',
+      s:'隔壁工位的同事凑过来：“就一眼，帮我看看这个表为什么求和不对。”他自己屏幕上开着 11 个 Excel 和一个购物网站。',
+      c:[
+        { l:'帮他看了，顺手把公式改对', e:{san:-10,sus:-8}, r:'你花了 12 分钟。他非常感激，说“改天请你喝奶茶”。你知道那杯奶茶永远不会来。' },
+        { l:'说“我也不是很熟”，然后继续摸鱼', e:{san:8,sus:2}, r:'他“哦”了一声走开了。你听见他在隔壁叹气。你有点愧疚，但只有一点点。' },
+        { l:'用公司电脑帮他做了，顺便收 50 块', e:{san:6,sus:8,money:50}, r:'他微信转了 50 块给你，备注“技术服务费”。你感觉自己在公司内部建立了一个微型经济体。' }
+      ]
+    },
+    {
+      t:'打印机卡纸了',
+      s:'全组唯一会修打印机的人今天请假了。现在打印机卡着 40 页标书，明天上午要用。所有人都在看着你——因为你是离它最近的那个。',
+      c:[
+        { l:'打开面板，把卡住的纸一张张拽出来', e:{san:-14,sus:-14}, r:'你花了 25 分钟，手上沾满碳粉，但打印机活了。全组为你鼓掌。你成了新的“唯一会修打印机的人”。' },
+        { l:'打电话叫 IT 支援，然后回工位', e:{san:4,sus:6}, r:'IT 说“下午过来看看”。下午没来。标书最后还是你去修的，但至少你多摸了 40 分钟鱼。' },
+        { l:'把纸全部抽出来，抱着去楼下打印店', e:{san:2,sus:-6,money:-30}, r:'你抱着 40 页纸走了 800 米。回来时，同事们看你的眼神像在看一个傻子，也像在看一个英雄。' }
+      ]
+    },
+    {
+      t:'团建狼人杀',
+      s:'团建到了晚上 9 点，老板提议玩狼人杀。他抽到了狼人，并且在第一晚就杀了你。现在轮到你说遗言。所有人都在看你。',
+      c:[
+        { l:'认真分析局势，指认老板是狼', e:{san:12,sus:26}, r:'你说得有理有据。但所有人都投了你，因为他们都知道老板是狼。第二天，你被调去了另一个项目组。' },
+        { l:'“我就是个平民，没什么好说的”', e:{san:-12,sus:-12}, r:'你光速出局。老板说“这局玩得没意思”，但没有人接话。' },
+        { l:'假装哽咽：“其实，我一直把大家当家人”', e:{san:18,sus:-6}, r:'全场爆笑。老板笑得最开心。你活到了最后，还赢了一瓶饮料。' }
+      ]
+    },
+    {
+      t:'天花板上的黑点',
+      s:'你抬头喝水时，忽然发现天花板角落有一个你没见过的黑点。它正对着你的工位。你不知道它什么时候装的，也不知道它是不是在亮。',
+      c:[
+        { l:'接下来两小时把腰板挺得笔直，面无表情地敲键盘', e:{san:-18,sus:-16}, r:'你的背疼得像被钉在椅子上。但你确定，那两小时里你看起来像个完美的员工。' },
+        { l:'站起来，走到那个黑点底下仔细看', e:{san:6,sus:14}, r:'你仰着头看了 30 秒。隔壁同事说：“那是个烟雾报警器。”你回到工位，感觉自己像个傻子。' },
+        { l:'拍张照片发到摸鱼群：“我们被监控了吗”', e:{san:10,sus:8}, r:'群里瞬间炸了。有人说是烟感，有人说是真的。三小时后，IT 发全员邮件：“近期进行设备维护，如有疑问请联系行政。”' }
+      ]
+    },
+    {
+      t:'前同事的朋友圈',
+      s:'你刷到前同事的朋友圈：一张海边咖啡厅的照片，配文“辞职第 30 天，终于睡到自然醒”。下面已经有 20 个赞，其中 3 个是你的现同事。',
+      c:[
+        { l:'点个赞，然后关掉朋友圈', e:{san:-8,sus:2}, r:'你点了赞。三分钟后你收到他的私信：“要不要也考虑一下？”你回复：“再等等。”你已经在“再等等”里等了两年。' },
+        { l:'截图发给自己，存进“离职基金”相册', e:{san:14,sus:4}, r:'你把那张照片存进一个叫“未来”的相册。相册里已经有 47 张类似的照片了。' },
+        { l:'在评论区写“羡慕”，然后立刻删除', e:{san:-14,sus:0}, r:'你打了两个字，犹豫了 8 秒，删掉了。你不知道自己在害怕什么，可能是怕被现在的同事看到，也可能是怕被现在的自己看到。' }
+      ]
+    },
+    {
+      t:'内部转岗 JD',
+      s:'内网挂出一个新岗位：薪资上浮 15%，但要求“抗压能力强、能接受弹性工作制、有主人翁意识”。你盯着这行字看了很久。',
+      c:[
+        { l:'立刻投递，赌一把', e:{san:10,sus:18}, r:'你投了。第二天 HR 找你聊了 20 分钟，问你“能不能接受周末偶尔处理一下事情”。你说能。',
+          risk:{ p:0.3, e:{san:-20,sus:30}, r:'你投递的消息不知怎么传到现组长耳朵里。他找你谈话：“最近是不是有什么想法？”你花了 40 分钟解释自己“只是随便看看”。' } },
+        { l:'关掉页面，继续干现在的活', e:{san:-6,sus:-8}, r:'你关掉了页面。屏幕上还是那行没写完的代码。你忽然觉得它看起来亲切了一点。' },
+        { l:'把这个 JD 转发给了那个天天抱怨的同事', e:{san:12,sus:-4}, r:'他看了之后眼睛一亮，说“谢了兄弟”。一周后他真的转岗了，走之前请你喝了杯咖啡。' }
+      ]
+    },
+    {
+      t:'空调 18 度',
+      s:'办公室的空调常年 18 度。你穿着外套，还是冷得手指发僵。坐在出风口正下方的实习生已经裹上了毯子。行政说“温度是统一调控的”。',
+      c:[
+        { l:'穿上外套，戴上手套，继续干活', e:{san:-10,sus:-2}, r:'你戴着一副露指手套敲代码。有人路过时多看了你两眼。你假装自己是个艺术家。' },
+        { l:'去跟行政反映，要求调高温度', e:{san:-6,sus:8}, r:'行政说“我反馈一下”。三天后，空调依然是 18 度。但至少你努力过了。' },
+        { l:'借口“有点不舒服”，去楼下便利店买热饮', e:{san:12,sus:6,money:-15}, r:'你在楼下便利店站了 15 分钟，捧着一杯热可可。回到工位时，手指终于能动了。' }
+      ]
+    },
+    {
+      t:'老同学问你“在哪高就”',
+      s:'大学同学群里，有人 @ 你：“听说你在 XX 公司？那边待遇应该很好吧！”群里 40 多个人，都在等你的回答。',
+      c:[
+        { l:'“还行，就是普通打工”', e:{san:-6,sus:-2}, r:'你发完这句话，群里安静了。五分钟后又有人开始聊别的。你盯着屏幕，觉得自己刚才好像说了什么很重要的话。' },
+        { l:'发一张工位照片，配文“凑合过”', e:{san:12,sus:10}, r:'你拍了一张工位照片，特意把显示器上的代码打码了。下面有人评论“看着好高级”。你笑了笑。' },
+        { l:'“我最近在考虑换工作”', e:{san:8,sus:6}, r:'这句话一发出去，立刻有三个同学私聊你，问你要不要内推。你忽然意识到，你只是想要一个可以抱怨的地方。' }
+      ]
+    },
+    {
+      t:'21:47 的需求变更',
+      s:'你刚洗完澡，手机弹出一条消息。产品经理：“不好意思打扰了，明天要上线的东西有个小改动，你看方便现在看一下吗？”后面跟着一张 30 页的 PRD。',
+      c:[
+        { l:'回复“好的，我看一下”，然后打开电脑', e:{san:-22,sus:-6}, r:'你看到了 23:15。改动其实只有 3 行代码。你躺在床上，眼睛睁着，脑子还在跑那个函数。' },
+        { l:'假装没看到，明天早上再说', e:{san:10,sus:14}, r:'你把手机翻了个面，继续看剧。但你一整晚都在想那 30 页 PRD 里到底有什么。' },
+        { l:'回复“明天早上第一时间处理”', e:{san:-4,sus:-4}, r:'产品回复“好的，辛苦啦～”。你放下手机。这大概是今天做的最正确的一个决定。' }
+      ]
+    },
+    {
+      t:'年会节目征集',
+      s:'行政在群里发通知：每个部门必须出一个节目，报名截止今天下班。组长在群里 @ 了你：“小李，你年轻，你来组织一下？”',
+      c:[
+        { l:'“好的，我来！”然后私下找人分摊', e:{san:-12,sus:-8}, r:'你拉了 4 个人，排练了 3 次。年会当天你们的节目拿了“最佳创意奖”。你在台上笑得很开心，下来后一个人去了洗手间。' },
+        { l:'“我五音不全，还是让小王来吧”', e:{san:8,sus:16}, r:'小王被推上了台。他在年会上跳了一段街舞，全公司都记住了他。组长看你的眼神有点复杂。' },
+        { l:'提议“我们部门出个朗诵节目，念我们的季度总结”', e:{san:16,sus:-4}, r:'全场爆笑。老板说“这个好，有自嘲精神”。你成了这一年年会的名场面之一。' }
+      ]
+    },
+    {
+      t:'体检报告',
+      s:'体检报告推送到了手机。你点开，看到“脂肪肝（轻度）”“颈椎生理曲度变直”“窦性心律不齐”几行字。你今年 26 岁。',
+      c:[
+        { l:'收藏报告，转发给三个朋友，配文“我们都有光明的未来”', e:{san:14,sus:6}, r:'三个朋友秒回“哈哈哈+1”。你们在群里互相发了一堆体检异常项，笑到最后没人再说话了。' },
+        { l:'把报告关掉，点了杯全糖奶茶', e:{san:6,sus:2,money:-18}, r:'你喝完奶茶，感觉好了一点。感觉好了一点这件事本身，又让你感觉坏了一点。' },
+        { l:'打开健身 App，下单了一张年卡', e:{san:12,sus:-6,money:-1200}, r:'你付款了。年卡有效期 365 天。你上一次办年卡是两年前，去了 4 次。' }
+      ]
+    },
+    {
+      t:'实习生的举报',
+      s:'你听说组里的实习生给 HR 发了邮件，说“某些正式员工每天下午都在摸鱼”。你回想了一下，他好像就坐在你斜后方。',
+      c:[
+        { l:'主动找他聊聊，请他喝奶茶', e:{san:-8,sus:-16,money:-30}, r:'你请他喝了奶茶，聊了 20 分钟职业规划。他说“哥你人真好”。你不知道该高兴还是难过。' },
+        { l:'接下来三天表演 996，让他无话可说', e:{san:-20,sus:-10}, r:'你连续三天最后一个走。第三天晚上，实习生给你发消息：“哥，你也太卷了吧。”' },
+        { l:'什么也不做，等 HR 找上门', e:{san:10,sus:22}, r:'一周过去了，HR 没有找你。你听说那封邮件被转给了实习生导师，导师说“先好好学习”。你松了口气，又觉得有点荒唐。' }
+      ]
+    },
+    {
+      t:'老板问“有什么建议”',
+      s:'全员会上，老板忽然停下来，环视一圈：“大家对公司有什么建议，畅所欲言，我不记仇。”会议室里安静得能听见空调声。',
+      c:[
+        { l:'低头翻笔记本，假装在记录', e:{san:-8,sus:-10}, r:'你把笔记本翻到下一页，认真地写下“不要第一个发言”。' },
+        { l:'认真提了一个流程优化建议', e:{san:-6,sus:14}, r:'老板点点头说“很有想法”，然后让你“牵头推进一下”。你成了这个建议的负责人，但你其实只是随口一说。' },
+        { l:'“我觉得都挺好，没什么建议”', e:{san:6,sus:-6}, r:'老板笑了笑，说“还是要有主人翁意识”。你点头，心里想的是怎么熬到下班。' }
+      ]
+    },
+    {
+      t:'微信步数排行榜',
+      s:'你打开微信，发现今天的步数排行榜上，你只有 287 步。而你隔壁工位的同事已经 12000 步了。你猜他一定去了很多次茶水间。',
+      c:[
+        { l:'起身去最远的那个洗手间，刷满步数', e:{san:8,sus:6}, r:'你走了 5 分钟，刷到了 800 步。回来时路过前台，小姐姐问你去哪了，你说“开会”。' },
+        { l:'把手机绑在椅子上，手动摇一摇', e:{san:12,sus:-2}, r:'你摇了 10 分钟，刷到了 3000 步。排行榜上有人给你点了赞。' },
+        { l:'关掉排行榜，拒绝一切形式主义的比较', e:{san:-6,sus:-8}, r:'你关掉了排行榜。但你忍不住又打开了三次。' }
+      ]
+    },
+    {
+      t:'隔壁组来挖人',
+      s:'隔壁组的组长在茶水间拦住你，压低声音说：“我们组缺个核心，你要不要过来？薪资好谈。”你端着咖啡杯，手有点抖。',
+      c:[
+        { l:'“我考虑一下，谢谢哥”', e:{san:6,sus:6}, r:'他拍了拍你的肩膀说“随时找我”。你回到工位后，心跳了整整 20 分钟。' },
+        { l:'“我挺感兴趣的，但怕现组长不放人”', e:{san:-4,sus:14}, r:'他说“这个我来搞定”。三天后，现组长找你谈话，问你“是不是对现在的工作有什么不满意”。' },
+        { l:'直接拒绝，说“我对现在挺满意的”', e:{san:-8,sus:-10}, r:'他笑了笑说“那挺好”。你回到工位，忽然有点后悔。' }
+      ]
+    },
+    {
+      t:'报销单被退回',
+      s:'你上个月出差的报销单被财务退回了，理由是“发票抬头写错了”。你盯着那 380 块钱的发票，想不起来是哪一顿饭。',
+      c:[
+        { l:'重新贴票、重新提交，安静接受', e:{san:-12,sus:-4}, r:'你花了 40 分钟重新整理。财务说“下次注意”。你点头。你不知道下次是什么时候。' },
+        { l:'找财务当面沟通，试图说明情况', e:{san:-16,sus:10}, r:'财务说“这是规定”。你说了 15 分钟，最后还是回去重新贴票了。' },
+        { l:'直接放弃这 380 块，把它当作学费', e:{san:8,sus:-2,money:-380}, r:'你把它从报销文件夹里删掉了。你感觉自己失去了什么，又像是放下了什么。' }
+      ]
+    },
+    {
+      t:'大学室友创业成功',
+      s:'大学室友在朋友圈晒了新一轮融资的新闻稿，配文“感谢团队，感谢时代”。你给他点了个赞，然后关掉了手机。',
+      c:[
+        { l:'私聊他“恭喜啊，改天约饭”', e:{san:-8,sus:4}, r:'他秒回“好啊好啊，最近太忙了，等我空了约你”。你知道这顿饭永远不会来。' },
+        { l:'关掉朋友圈，认真干了半小时活', e:{san:-6,sus:-10}, r:'你干了半小时活。半小时后你又打开了朋友圈，发现他又发了一条。' },
+        { l:'把这张截图存进“离职基金”相册', e:{san:14,sus:4}, r:'你把它存进那个相册。相册里已经有 48 张了。你忽然觉得，这个相册本身也许就是你的创业项目。' }
+      ]
+    },
+    {
+      t:'深夜的“在吗”',
+      s:'22:30。你正在洗澡，手机在客厅震动。出来一看，是隔壁组同事：“在吗？有个小问题想请教你一下。”',
+      c:[
+        { l:'回复“在的，你说”', e:{san:-14,sus:-4}, r:'你花了 25 分钟帮他解决了问题。他说“太感谢了，明天请你喝奶茶”。你挂掉电话，感觉今天结束了。' },
+        { l:'假装没看到，明天早上回复“刚看到”', e:{san:10,sus:6}, r:'第二天早上你回复“不好意思刚看到”。他说“没事没事，我自己解决了”。你松了一口气，又有点过意不去。' },
+        { l:'回复“明天上班说哈，我先睡了”', e:{san:-2,sus:-8}, r:'他说“好的好的，打扰了”。你放下手机。这大概是今天做的最正确的一个决定。' }
+      ]
+    },
+    {
+      t:'前台的快递山',
+      s:'你路过前台，发现自己上周买的那本书还躺在快递堆里。前台小姐姐说：“你自己的快递，记得拿走啊。”旁边是 30 多个无人认领的快递。',
+      c:[
+        { l:'抱着快递回工位，当着同事的面拆开', e:{san:10,sus:4}, r:'你拆开是一本《被讨厌的勇气》。你把它放在工位上。三天后，它成了全组借阅率最高的书。' },
+        { l:'“帮我放一下，我下班再拿”', e:{san:2,sus:6}, r:'前台小姐姐说“那你记得啊”。你下班时忘了。第二天它还在那儿。第三天也是。' },
+        { l:'顺便帮同事把认得出的快递一起拿回去', e:{san:-6,sus:-10}, r:'你抱着 5 个快递回到工位，同事们纷纷道谢。你感觉自己像个快递员，但也像个英雄。' }
+      ]
+    },
+    {
+      t:'突然断网',
+      s:'下午 15:47，办公室忽然断网了。所有人第一时间抬头，互相看了看，然后低头继续敲键盘。IT 说“正在抢修，20 分钟”。',
+      c:[
+        { l:'打开手机热点，继续摸鱼', e:{san:16,sus:8}, r:'你用手机热点刷了 20 分钟视频。网恢复了。你装作刚发现的样子。' },
+        { l:'趁机站起来走动，找人聊天', e:{san:8,sus:12}, r:'你走到隔壁组聊了 15 分钟。回来后发现网早就恢复了，但没人在意。' },
+        { l:'面无表情地继续敲键盘，假装断网也能干活', e:{san:-12,sus:-12}, r:'你敲了 20 分钟，其实只是在同一个文件里按回车。IT 修好网的时候，你已经在按第 340 次回车了。' }
+      ]
+    },
+    {
+      t:'保洁阿姨的质问',
+      s:'晚上 7 点，办公室只剩你一个人。保洁阿姨推着拖把进来，看了你一眼，忽然开口：“你怎么天天这么晚？是不是又没加班费？”',
+      c:[
+        { l:'“阿姨，我这叫敬业”', e:{san:10,sus:-4}, r:'阿姨笑了笑说“你可拉倒吧”。她拖完地走了。你一个人坐在空荡荡的办公室里，忽然觉得刚才那两句话很亲切。' },
+        { l:'“是啊，所以我现在就走”', e:{san:16,sus:6}, r:'你收拾东西走了。阿姨在你身后说“这就对了”。你走出大楼时，天已经黑了。' },
+        { l:'“阿姨，您也辛苦了”', e:{san:12,sus:-6}, r:'阿姨摆摆手说“习惯了”。她拖地的时候，你忽然觉得今天也不算太糟。' }
+      ]
+    },
+    {
+      t:'前任的消息',
+      s:'微信弹出一条好友申请。备注写着：“好久不见，听说你在 XX 公司？”你盯着那个名字看了十秒。',
+      c:[
+        { l:'通过申请，看看她要说什么', e:{san:-16,sus:6}, r:'她问你能不能帮忙内推。你说可以。她发来一份简历。你打开看了一眼，发现她现在是某大厂的产品经理。' },
+        { l:'直接拒绝，什么也不说', e:{san:10,sus:4}, r:'你点了“拒绝”。手机安静下来。你忽然觉得，这次是你赢了。' },
+        { l:'截图发到闺蜜/兄弟群，问“怎么办”', e:{san:14,sus:8}, r:'群里炸了。有人劝你通过，有人劝你拉黑。你看完 80 条消息，最后什么也没做。' }
+      ]
+    },
+    {
+      t:'年度调薪邮件',
+      s:'HR 发来一封邮件，标题是“关于年度调薪的说明”。你点开，看到了“综合考虑公司经营状况及个人绩效”，下面是一个你不想面对的数字。',
+      c:[
+        { l:'平静地关掉邮件，继续工作', e:{san:-14,sus:-8}, r:'你关掉了邮件。你打开计算器，算了算这个数字在扣除通胀后的实际涨幅，然后把计算器也关掉了。' },
+        { l:'截图发到摸鱼群，配文“就这？”', e:{san:12,sus:14}, r:'群里瞬间 30 条“哈哈哈”。有人发了自己的邮件截图，比你更低。你忽然平衡了。' },
+        { l:'回复 HR：“请问有没有面谈的机会”', e:{san:-10,sus:10}, r:'HR 约你周五下午聊。你花了三天准备说辞。面谈只用了 10 分钟，HR 说“这是部门统一标准”。' }
+      ]
+    },
+    {
+      t:'隔壁工位在哭',
+      s:'你听到隔壁传来压抑的抽泣声。坐在你旁边那位平时很安静的同事，正用胳膊挡着脸，肩膀一耸一耸的。',
+      c:[
+        { l:'递过去一张纸巾，什么也不说', e:{san:6,sus:-8}, r:'她接过纸巾，小声说了句“谢谢”。你继续工作。一个小时后，她发微信给你：“谢谢你没问我怎么了。”' },
+        { l:'假装没听见，戴上耳机', e:{san:-10,sus:2}, r:'你戴上耳机。抽泣声被音乐盖住了。你听了两小时歌，一个下午没干成什么事。' },
+        { l:'轻声问她“要不要出去走走”', e:{san:-6,sus:6}, r:'她摇摇头说“没事”。你点点头，继续干活。你不知道还能做什么。' }
+      ]
+    },
+    {
+      t:'“在干嘛”',
+      s:'下午 4 点，你收到一条微信，来自部门总监：“在干嘛？”就两个字，没有标点。',
+      c:[
+        { l:'秒回“在做 XX 方案，马上发您”', e:{san:-10,sus:-12}, r:'总监回了个“嗯”。你用了 20 分钟把那份不存在的方案真的写了出来。' },
+        { l:'回复“刚开完会，正在处理手头的事”', e:{san:8,sus:10}, r:'总监没有回复。你盯着聊天框看了五分钟，然后关掉了。' },
+        { l:'不回复，直接端着杯子去他工位', e:{san:-6,sus:14}, r:'总监问：“你怎么来了？”你说：“看到您消息，过来问问有什么事。”他愣了一下，说“没事，随便问问”。' }
+      ]
+    },
+    {
+      t:'团建投票',
+      s:'行政在群里发起投票：这次团建，A. 温泉 B. 露营 C. 密室逃脱。你看着三个选项，觉得没有一个是你想去的地方。',
+      c:[
+        { l:'投温泉，因为可以泡在水里不说话', e:{san:8,sus:-4}, r:'温泉当选。团建那天，你在池子里泡了两个小时，一句话也没说。同事说“你真会享受”。' },
+        { l:'投露营，因为可以假装信号不好', e:{san:6,sus:6}, r:'露营当选。团建那天，你在一片草地上坐了六个小时，理由是“信号不好，处理不了工作”。' },
+        { l:'弃权，然后在群里说“你们定就好”', e:{san:-6,sus:-6}, r:'群主 @ 了你三次。最后你被默认投了密室逃脱。团建那天，你是第一个被吓到蹲在地上的人。' }
+      ]
+    }
+  ];
+
+  /* =========================================================
+     称号
+  ========================================================= */
+  function getTitle(days) {
+    if (days <= 0) return { name:'还没坐上工位就被架走的人', tag:'T-0' };
+    if (days === 1) return { name:'第一天就被架走的新人', tag:'T-1' };
+    if (days <= 3) return { name:'三天试用期都没撑过的实习生', tag:'T-2' };
+    if (days <= 7) return { name:'有点东西的职场新晋老油条', tag:'T-3' };
+    if (days <= 14) return { name:'潜伏一周半的资深摸鱼专员', tag:'T-4' };
+    if (days <= 29) return { name:'半个月没被发现的老江湖', tag:'T-5' };
+    if (days <= 59) return { name:'白嫖一个月的摸鱼大师', tag:'T-6' };
+    if (days <= 99) return { name:'白嫖两个月的摸鱼宗师', tag:'T-7' };
+    return { name:'白嫖数万元的摸鱼成仙者', tag:'T-∞' };
+  }
+
+  /* =========================================================
+     状态
+  ========================================================= */
+  const state = {
+    day: 1,
+    slot: 0,
+    san: 60,
+    sus: 25,
+    money: 3200,
+    over: false,
+    locked: false
+  };
+
+  let pool = [];
+  let toastTimer = null;
+
+  /* =========================================================
+     DOM
+  ========================================================= */
+  const $ = function (id) { return document.getElementById(id); };
+  const stageInner = $('stageInner');
+  const choicesEl = $('choices');
+  const introEl = $('intro');
+  const dayEndEl = $('dayEnd');
+  const endingEl = $('ending');
+  const debugPanel = $('debugPanel');
+  const tbCenter = $('tbCenter');
+  const memoTrigger = $('memoTrigger');
+
+  /* =========================================================
+     工具
+  ========================================================= */
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function slotDotsHTML() {
+    let html = '<div class="slot-row">';
+    for (let i = 0; i < 4; i++) {
+      let cls = 'slot-dot';
+      if (i < state.slot) cls += ' done';
+      else if (i === state.slot) cls += ' now';
+      html += '<span class="' + cls + '"></span>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function toast(msg) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      el.classList.remove('show');
+    }, 1600);
+  }
+
+  /* =========================================================
+     HUD
+  ========================================================= */
+  function renderHUD() {
+    $('vDay').textContent = state.day;
+    $('vSan').textContent = Math.round(state.san);
+    $('vSus').textContent = Math.round(state.sus) + '%';
+    $('vMoney').textContent = state.money;
+
+    $('bSlot').style.width = clamp(state.slot / 4 * 100, 0, 100) + '%';
+    $('bSan').style.width = clamp(state.san, 0, 100) + '%';
+    $('bSus').style.width = clamp(state.sus, 0, 100) + '%';
+    $('bMoney').style.width = clamp(state.money / 50000 * 100, 0, 100) + '%';
+
+    document.querySelector('.stat[data-k="sus"]').classList.toggle('warn', state.sus >= 72);
+    document.querySelector('.stat[data-k="san"]').classList.toggle('danger', state.san <= 22);
+
+    // 备忘录工具栏日期（随天数递增）
+    if (tbCenter) {
+      const baseDate = new Date(2024, 0, 6);
+      baseDate.setDate(baseDate.getDate() + (state.day - 1));
+      const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+      tbCenter.textContent = (baseDate.getMonth() + 1) + '月' + baseDate.getDate() + '日 ' + weekdays[baseDate.getDay()];
+    }
+  }
+
+  /* =========================================================
+     数值结算
+  ========================================================= */
+  function applyEffect(eff) {
+    if (!eff) return;
+    if (eff.san) state.san = clamp(state.san + eff.san, 0, 100);
+    if (eff.sus) state.sus = clamp(state.sus + eff.sus, 0, 100);
+    if (eff.money) state.money = Math.max(0, state.money + eff.money);
+  }
+
+  function tickSlot() {
+    const rise = 4 + Math.floor((state.day - 1) / 3);
+    state.sus = clamp(state.sus + rise, 0, 100);
+    state.san = clamp(state.san - 3, 0, 100);
+  }
+
+  /* =========================================================
+     抽事件
+  ========================================================= */
+  function drawEvent() {
+    if (pool.length === 0) pool = shuffle(EVENTS.slice());
+    return pool.pop();
+  }
+
+  /* =========================================================
+     渲染事件
+  ========================================================= */
+  function renderEvent(ev) {
+    const slot = SLOTS[state.slot];
+
+    stageInner.innerHTML =
+      slotDotsHTML() +
+      '<div class="clock fade">Day ' + state.day + ' · ' + slot.time + ' · ' + slot.label + '</div>' +
+      '<h1 class="evt-title fade" style="animation-delay:.05s">' + ev.t + '</h1>' +
+      '<p class="evt-text fade" style="animation-delay:.1s">' + ev.s + '</p>';
+
+    choicesEl.innerHTML = '';
+
+    ev.c.forEach(function (choice, i) {
+      const btn = document.createElement('button');
+      btn.className = 'btn fade';
+      btn.style.animationDelay = (0.14 + i * 0.06) + 's';
+      btn.innerHTML = '<span class="btn-label">' + choice.l + '</span>';
+      btn.addEventListener('click', function () { pick(choice); });
+      choicesEl.appendChild(btn);
+    });
+
+    state.locked = false;
+  }
+
+  /* =========================================================
+     渲染结果
+  ========================================================= */
+  function renderResult(text, risked, finishedSlot) {
+    const slot = finishedSlot;
+
+    stageInner.innerHTML =
+      slotDotsHTML() +
+      (risked ? '<div class="risk-badge">⚡ 意外发生</div>' : '') +
+      '<div class="clock fade">Day ' + state.day + ' · ' + slot.time + ' · 刚刚</div>' +
+      '<p class="result-text fade" style="animation-delay:.05s">' + text + '</p>';
+
+    choicesEl.innerHTML = '';
+
+    const isLastSlot = state.slot >= 4;
+    const btn = document.createElement('button');
+    btn.className = 'btn primary fade';
+    btn.style.animationDelay = '.18s';
+    btn.textContent = isLastSlot ? '打卡下班 →' : '继续摸鱼 →';
+    btn.addEventListener('click', function () {
+      if (state.locked) return;
+      state.locked = true;
+      advance();
+    });
+    choicesEl.appendChild(btn);
+
+    state.locked = false;
+  }
+
+  /* =========================================================
+     玩家选择
+  ========================================================= */
+  function pick(choice) {
+    if (state.over || state.locked) return;
+    state.locked = true;
+
+    const finishedSlot = SLOTS[state.slot];
+
+    let eff = choice.e || {};
+    let res = choice.r || '';
+    let risked = false;
+
+    if (choice.risk && Math.random() < choice.risk.p) {
+      eff = choice.risk.e;
+      res = choice.risk.r;
+      risked = true;
+    }
+
+    applyEffect(eff);
+    tickSlot();
+    state.slot += 1;
+
+    renderResult(res, risked, finishedSlot);
+
+    setTimeout(function () { renderHUD(); }, 420);
+  }
+
+  /* =========================================================
+     推进
+  ========================================================= */
+  function advance() {
+    if (state.sus >= 100) { showEnding('fired'); return; }
+    if (state.san <= 0)   { showEnding('mad');   return; }
+    if (state.day >= VETERAN_DAY) { showEnding('veteran'); return; }
+
+    if (state.slot >= 4) {
+      showDayEnd();
+      return;
+    }
+
+    renderEvent(drawEvent());
+  }
+
+  /* =========================================================
+     日结
+  ========================================================= */
+  function showDayEnd() {
+    const heal  = Math.max(6, 20 - Math.floor((state.day - 1) / 2));
+    const decay = Math.max(6, 18 - Math.floor((state.day - 1) / 3));
+
+    const oldSan = Math.round(state.san);
+    const oldSus = Math.round(state.sus);
+
+    state.san = clamp(state.san + heal, 0, 100);
+    state.sus = clamp(state.sus - decay, 0, 100);
+    state.money += DAILY_SALARY;
+
+    const sanGain = Math.round(state.san) - oldSan;
+    const susDrop = oldSus - Math.round(state.sus);
+
+    renderHUD();
+
+    const isMilestone = state.day % 5 === 0;
+
+    dayEndEl.innerHTML =
+      '<div class="end-sub">Day ' + state.day + ' · 17:30</div>' +
+      '<div class="end-icon fade">🌇</div>' +
+      '<div class="end-title good fade" style="animation-delay:.06s">打卡下班！</div>' +
+      '<div class="end-text fade" style="animation-delay:.12s">恭喜你熬过第 ' + state.day + ' 天。' +
+        (isMilestone ? '<br><span style="color:#D48806;font-weight:600">（连续作战 ' + state.day + ' 天，你已经是个老兵了）</span>' : '') +
+      '</div>' +
+      '<div class="daily-list fade" style="animation-delay:.18s">' +
+        '<div><span>💼 当日底薪入账</span><b class="gold">+¥' + DAILY_SALARY + '</b></div>' +
+        '<div><span>🟢 San 值恢复</span><b class="good">+' + sanGain + '</b></div>' +
+        '<div><span>🔴 老板怀疑回落</span><b class="sus">−' + susDrop + '</b></div>' +
+        '<div><span>💰 当前存款</span><b class="gold">¥' + state.money + '</b></div>' +
+      '</div>' +
+      '<div class="end-actions fade" style="animation-delay:.24s">' +
+        '<button class="btn primary" id="nextDayBtn">开始新的一天 →</button>' +
+      '</div>';
+
+    dayEndEl.classList.remove('hidden');
+
+    $('nextDayBtn').addEventListener('click', function () {
+      dayEndEl.classList.add('hidden');
+      state.day += 1;
+
+      if (state.day >= VETERAN_DAY) {
+        showEnding('veteran');
+        return;
+      }
+
+      state.slot = 0;
+      state.locked = false;
+      renderHUD();
+      renderEvent(drawEvent());
+    });
+  }
+
+  /* =========================================================
+     终极结局
+  ========================================================= */
+  function showEnding(type) {
+    state.over = true;
+
+    let days, icon, titleText, tone, text, cause, causeExtra;
+
+    if (type === 'veteran') {
+      days = 30;
+      icon = '🏆';
+      titleText = '光荣通关 · 摸鱼老兵';
+      tone = 'gold';
+      text = '你在这家公司活过了 30 天。部门换了 3 个方向，老板换了 2 种管理风格，而你依然安静地、熟练地、不动声色地坐在那个工位上。他们说你是个老油条——你觉得这是一种赞美。';
+      cause = '光荣退伍 · 存活满 ' + days + ' 天';
+      causeExtra = '称号达成 · 摸鱼成仙者';
+    } else {
+      days = Math.max(0, state.day - 1);
+
+      if (type === 'fired') {
+        icon = '🚪';
+        titleText = '终极战报 · 被开除';
+        tone = 'bad';
+        text = 'HR 拿着那份《员工行为观察记录》走过来，眼神里甚至带点同情。她知道你其实没做错什么，只是这家公司不需要一个活人。';
+        cause = '怀疑度爆表 · 被 HR 请进会议室';
+        causeExtra = '最终怀疑度 ' + Math.round(state.sus) + '%';
+      } else {
+        icon = '🤯';
+        titleText = '终极战报 · 工位发疯';
+        tone = 'wild';
+        text = '你忽然站起来，把键盘举过头顶，用整个办公室都能听见的声音说：“我受够了。”然后你轻轻把它放下，坐回去，像什么都没发生。当天下午你被送去做心理疏导。';
+        cause = 'San 值归零 · 当场精神崩溃';
+        causeExtra = '最终 San 值 0';
+      }
+    }
+
+    const salaryStolen = days * DAILY_SALARY;
+    const title = getTitle(days);
+
+    endingEl.innerHTML =
+      '<div class="end-sub">SURVIVAL REPORT</div>' +
+      '<div class="end-icon fade">' + icon + '</div>' +
+      '<div class="end-title ' + tone + ' fade" style="animation-delay:.06s">' + titleText + '</div>' +
+      '<div class="end-text fade" style="animation-delay:.12s">' + text + '</div>' +
+      '<div class="battle-card fade" style="animation-delay:.18s">' +
+        '<div class="row"><span>在此公司白嫖</span><b class="purple">' + (days > 0 ? days + ' 天' : '不到 1 天') + '</b></div>' +
+        '<div class="row"><span>累计摸走工资</span><b class="gold">¥' + salaryStolen + '</b></div>' +
+        '<div class="row"><span>最终职场称号</span><b class="purple">' + title.name + '</b></div>' +
+        '<div class="row"><span>评级代号</span><b>' + title.tag + '</b></div>' +
+        '<div class="row"><span>直接死因</span><b class="bad">' + cause + '</b></div>' +
+        '<div class="row"><span>遗言状态</span><b>' + causeExtra + '</b></div>' +
+        '<div class="row"><span>存款余额</span><b class="gold">¥' + state.money + '</b></div>' +
+      '</div>' +
+      '<div class="end-actions fade" style="animation-delay:.26s">' +
+        '<button class="btn primary" id="restartBtn">从 Day 1 重新开始</button>' +
+      '</div>';
+
+    endingEl.classList.remove('hidden');
+
+    $('restartBtn').addEventListener('click', function () {
+      endingEl.classList.add('hidden');
+      startGame();
+    });
+  }
+
+  /* =========================================================
+     开局
+  ========================================================= */
+  function startGame() {
+    state.day = 1;
+    state.slot = 0;
+    state.san = 60;
+    state.sus = 25;
+    state.money = 3200;
+    state.over = false;
+    state.locked = false;
+
+    pool = shuffle(EVENTS.slice());
+
+    dayEndEl.classList.add('hidden');
+    endingEl.classList.add('hidden');
+
+    renderHUD();
+    renderEvent(drawEvent());
+  }
+
+  $('startBtn').addEventListener('click', function () {
+    introEl.classList.add('hidden');
+    startGame();
+  });
+
+  /* =========================================================
+     🥚 隐藏彩蛋：连点「备忘录」5 次开启 Debug
+  ========================================================= */
+  let tapCount = 0;
+  let lastTapTime = 0;
+
+  memoTrigger.addEventListener('click', function (e) {
+    e.stopPropagation();
+    const now = Date.now();
+
+    // 超过设定间隔则重置连击
+    if (now - lastTapTime > TAP_TIMEOUT) {
+      tapCount = 0;
+    }
+    tapCount++;
+    lastTapTime = now;
+
+    // 未到 5 次时，给一点点微妙反馈（可选）
+    if (tapCount > 1 && tapCount < TAP_TARGET) {
+      // 静默计数，不给提示——保持隐蔽性
+    }
+
+    if (tapCount >= TAP_TARGET) {
+      tapCount = 0;
+      lastTapTime = 0;
+      const willShow = debugPanel.classList.contains('hidden');
+      debugPanel.classList.toggle('hidden');
+      if (willShow) {
+        toast('🔧 调试模式已开启');
+      } else {
+        toast('调试模式已关闭');
+      }
+    }
+  });
+
+  // 点击 Debug 面板里的按钮
+  debugPanel.querySelectorAll('button[data-act]').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      handleDebug(btn.dataset.act);
+    });
+  });
+
+  // 点击面板外区域收起
+  document.addEventListener('click', function (e) {
+    if (debugPanel.classList.contains('hidden')) return;
+    if (debugPanel.contains(e.target) || memoTrigger.contains(e.target)) return;
+    debugPanel.classList.add('hidden');
+  });
+
+  function handleDebug(act) {
+    dayEndEl.classList.add('hidden');
+    endingEl.classList.add('hidden');
+    state.over = false;
+    state.locked = false;
+
+    if (act === 'addDay') {
+      state.day += 5;
+      renderHUD();
+      toast('📅 天数 +5 → 现在是 Day ' + state.day);
+
+    } else if (act === 'addMoney') {
+      state.money += 10000;
+      renderHUD();
+      toast('💰 存款 +¥10000 → 现在 ¥' + state.money);
+
+    } else if (act === 'maxSus') {
+      state.sus = 100;
+      renderHUD();
+      toast('🔴 怀疑度已拉满 · 触发被开除结局');
+      setTimeout(function () { showEnding('fired'); }, 260);
+
+    } else if (act === 'zeroSan') {
+      state.san = 0;
+      renderHUD();
+      toast('🟢 San 值清零 · 触发工位发疯结局');
+      setTimeout(function () { showEnding('mad'); }, 260);
+
+    } else if (act === 'jump30') {
+      state.day = 30;
+      state.money += DAILY_SALARY * 29;
+      renderHUD();
+      toast('🏆 已跳转 Day 30 · 触发光荣通关结局');
+      setTimeout(function () { showEnding('veteran'); }, 300);
+    }
+  }
+
+  // 初始化
+  renderHUD();
+
+})();
+</script>
+</body>
+</html>
